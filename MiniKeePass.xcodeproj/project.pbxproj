@@ -51,6 +51,7 @@
 		52557A2E13EEEB4F004031E8 /* db_link_header@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 52557A0213EEEB4F004031E8 /* db_link_header@2x.png */; };
 		52557A2F13EEEB4F004031E8 /* db_logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 52557A0313EEEB4F004031E8 /* db_logo.png */; };
 		52557A3013EEEB4F004031E8 /* db_logo@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 52557A0413EEEB4F004031E8 /* db_logo@2x.png */; };
+		52557A3413EF07DE004031E8 /* ButtonCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 52557A3313EF07DE004031E8 /* ButtonCell.m */; };
 		52A177BC13EB698E00CEEFCE /* new.html in Resources */ = {isa = PBXBuildFile; fileRef = 52A177BB13EB698E00CEEFCE /* new.html */; };
 		68406ACD13CA42F200A5849C /* ImageButtonCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 68406ACC13CA42F200A5849C /* ImageButtonCell.m */; };
 		6876F67813B2D8F500A05C7A /* ImagesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6876F67713B2D8F400A05C7A /* ImagesViewController.m */; };
@@ -464,6 +465,8 @@
 		52557A0213EEEB4F004031E8 /* db_link_header@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "db_link_header@2x.png"; sourceTree = "<group>"; };
 		52557A0313EEEB4F004031E8 /* db_logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = db_logo.png; sourceTree = "<group>"; };
 		52557A0413EEEB4F004031E8 /* db_logo@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "db_logo@2x.png"; sourceTree = "<group>"; };
+		52557A3213EF07DE004031E8 /* ButtonCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ButtonCell.h; sourceTree = "<group>"; };
+		52557A3313EF07DE004031E8 /* ButtonCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ButtonCell.m; sourceTree = "<group>"; };
 		52A177BB13EB698E00CEEFCE /* new.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = new.html; sourceTree = "<group>"; };
 		68406ACB13CA42F200A5849C /* ImageButtonCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageButtonCell.h; sourceTree = "<group>"; };
 		68406ACC13CA42F200A5849C /* ImageButtonCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ImageButtonCell.m; sourceTree = "<group>"; };
@@ -1337,6 +1340,8 @@
 				68406ACC13CA42F200A5849C /* ImageButtonCell.m */,
 				689D043613A42C81005EBD36 /* PasswordFieldCell.h */,
 				689D043713A42C81005EBD36 /* PasswordFieldCell.m */,
+				52557A3213EF07DE004031E8 /* ButtonCell.h */,
+				52557A3313EF07DE004031E8 /* ButtonCell.m */,
 				689D044213A42C82005EBD36 /* SwitchCell.h */,
 				689D044313A42C82005EBD36 /* SwitchCell.m */,
 				689D044613A42C82005EBD36 /* TextFieldCell.h */,
@@ -1896,6 +1901,7 @@
 				52557A2313EEEB4F004031E8 /* NSURL+MPURLParameterAdditions.m in Sources */,
 				52557A2413EEEB4F004031E8 /* NSURLResponse+Encoding.m in Sources */,
 				52557A2513EEEB4F004031E8 /* NSString+Dropbox.m in Sources */,
+				52557A3413EF07DE004031E8 /* ButtonCell.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

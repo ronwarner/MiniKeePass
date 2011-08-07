@@ -16,24 +16,11 @@
  */
 
 #import <UIKit/UIKit.h>
-#import "PinViewController.h"
-#import "ChoiceCell.h"
-#import "SwitchCell.h"
-#import "ButtonCell.h"
-#import "SelectionListViewController.h"
 
-@interface SettingsViewController : UITableViewController <PinViewControllerDelegate, SelectionListViewControllerDelegate> {
-    SwitchCell *pinEnabledCell;
-    ChoiceCell *pinLockTimeoutCell;
-    SwitchCell *deleteOnFailureEnabledCell;
-    ChoiceCell *deleteOnFailureAttemptsCell;
-    SwitchCell *rememberPasswordsEnabledCell;
-    SwitchCell *hidePasswordsCell;
-    ButtonCell *linkDropboxCell;
-    
-    NSString *tempPin;
+@interface ButtonCell : UITableViewCell {
 }
 
-- (void)updateEnabledControls;
+- (id)initWithLabel:(NSString*)labelText;
+- (void)setEnabled:(BOOL)enabled;
 
 @end

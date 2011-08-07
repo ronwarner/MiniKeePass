@@ -15,25 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#import <UIKit/UIKit.h>
-#import "PinViewController.h"
-#import "ChoiceCell.h"
-#import "SwitchCell.h"
 #import "ButtonCell.h"
-#import "SelectionListViewController.h"
 
-@interface SettingsViewController : UITableViewController <PinViewControllerDelegate, SelectionListViewControllerDelegate> {
-    SwitchCell *pinEnabledCell;
-    ChoiceCell *pinLockTimeoutCell;
-    SwitchCell *deleteOnFailureEnabledCell;
-    ChoiceCell *deleteOnFailureAttemptsCell;
-    SwitchCell *rememberPasswordsEnabledCell;
-    SwitchCell *hidePasswordsCell;
-    ButtonCell *linkDropboxCell;
-    
-    NSString *tempPin;
+@implementation ButtonCell
+
+- (id)initWithLabel:(NSString*)labelText {
+    self = [super initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    if (self) {
+        // Initialization code
+        self.selectionStyle = UITableViewCellSelectionStyleNone;
+        
+        self.textLabel.text = labelText;
+        self.textLabel.textAlignment = UITextAlignmentCenter;
+    }
+    return self;
 }
 
-- (void)updateEnabledControls;
+- (void)dealloc {
+    [super dealloc];
+}
+
+- (void)setEnabled:(BOOL)enabled {
+    self.selectionStyle = enabled ? UITableViewCellSelectionStyleBlue : UITableViewCellSelectionStyleNone;
+    self.textLabel.enabled = enabled;
+}
 
 @end

@@ -20,12 +20,14 @@
 #import "SettingsViewController.h"
 #import "SelectionListViewController.h"
 #import "SFHFKeychainUtils.h"
+#import "DropboxSDK.h"
 
 enum {
     SECTION_PIN,
     SECTION_DELETE_ON_FAILURE,
     SECTION_REMEMBER_PASSWORDS,
     SECTION_HIDE_PASSWORDS,
+    SECTION_DROPBOX,
     SECTION_NUMBER
 };
 
@@ -51,6 +53,11 @@ enum {
     ROW_HIDE_PASSWORDS_NUMBER
 };
 
+enum {
+    ROW_LINK_DROPBOX_BUTTON,
+    ROW_LINK_DROPBOX_NUMBER
+};
+
 @implementation SettingsViewController
 
 - (void)viewDidLoad {
@@ -73,6 +80,8 @@ enum {
     
     hidePasswordsCell = [[SwitchCell alloc] initWithLabel:@"Hide Passwords"];
     [hidePasswordsCell.switchControl addTarget:self action:@selector(toggleHidePasswords:) forControlEvents:UIControlEventValueChanged];
+    
+    linkDropboxCell = [[ButtonCell alloc] initWithLabel:@"Link"];
 }
 
 - (void)dealloc {
@@ -114,6 +123,7 @@ enum {
     [pinLockTimeoutCell setEnabled:pinEnabled];
     [deleteOnFailureEnabledCell setEnabled:pinEnabled];
     [deleteOnFailureAttemptsCell setEnabled:pinEnabled && deleteOnFailureEnabled];
+    [linkDropboxCell setEnabled:YES]; //FIXME
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
@@ -133,6 +143,9 @@ enum {
             
         case SECTION_HIDE_PASSWORDS:
             return ROW_HIDE_PASSWORDS_NUMBER;
+        
+        case SECTION_DROPBOX:
+            return ROW_LINK_DROPBOX_NUMBER;
     }
     return 0;
 }
@@ -150,6 +163,9 @@ enum {
             
         case SECTION_HIDE_PASSWORDS:
             return @"General";
+            
+        case SECTION_DROPBOX:
+            return @"Dropbox";
     }
     return nil;
 }
@@ -167,6 +183,9 @@ enum {
             
         case SECTION_HIDE_PASSWORDS:
             return @"Hides passwords when viewing a password entry.";
+            
+        case SECTION_DROPBOX:
+            return @"Link with your Dropbox account to keep changes in sync between multiple devices.";
     }
     return nil;
 }
@@ -205,6 +224,13 @@ enum {
                     return hidePasswordsCell;
             }
             break;
+            
+        case SECTION_DROPBOX:
+            switch (indexPath.row) {
+                case ROW_LINK_DROPBOX_BUTTON:
+                    return linkDropboxCell;
+            }
+            break;
     }
     
     return nil;
@@ -229,6 +255,9 @@ enum {
         selectionListViewController.reference = indexPath;
         [self.navigationController pushViewController:selectionListViewController animated:YES];
         [selectionListViewController release];
+    } else if (indexPath.section == SECTION_DROPBOX && indexPath.row == ROW_LINK_DROPBOX_BUTTON) {
+        DBLoginController* controller = [[DBLoginController new] autorelease];
+        [controller presentFromController:self];
     }
 }
 

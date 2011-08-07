@@ -22,6 +22,10 @@
 #import "EntryViewController.h"
 #import "DatabaseManager.h"
 #import "SFHFKeychainUtils.h"
+#import "DropboxSDK.h"
+
+#define CONSUMER_KEY @"1cml57v07lqm5xu"
+#define CONSUMER_SECRET @"sao1iiuox8urrai"
 
 @implementation MiniKeePassAppDelegate
 
@@ -32,6 +36,10 @@ static NSInteger pinLockTimeoutValues[] = {0, 30, 60, 120, 300};
 static NSInteger deleteOnFailureAttemptsValues[] = {3, 5, 10};
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    //Dropbox code
+    DBSession* dbSession = [[DBSession alloc] initWithConsumerKey:CONSUMER_KEY consumerSecret:CONSUMER_SECRET];
+    [DBSession setSharedSession:dbSession];
+    
     // Initialize the images array
     int i;
     for (i = 0; i < NUM_IMAGES; i++) {
