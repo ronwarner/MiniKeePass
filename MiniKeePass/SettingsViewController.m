@@ -25,6 +25,7 @@
 enum {
     SECTION_PIN,
     SECTION_DELETE_ON_FAILURE,
+    SECTION_CLOSE,
     SECTION_REMEMBER_PASSWORDS,
     SECTION_HIDE_PASSWORDS,
     SECTION_DROPBOX,
@@ -42,6 +43,12 @@ enum {
     ROW_DELETE_ON_FAILURE_ENABLED,
     ROW_DELETE_ON_FAILURE_ATTEMPTS,
     ROW_DELETE_ON_FAILURE_NUMBER
+};
+
+enum {
+    ROW_CLOSE_ENABLED,
+    ROW_CLOSE_TIMEOUT,
+    ROW_CLOSE_NUMBER
 };
 
 enum {
@@ -82,6 +89,11 @@ enum {
     
     deleteOnFailureAttemptsCell = [[ChoiceCell alloc] initWithLabel:@"Attempts" choices:[NSArray arrayWithObjects:@"3", @"5", @"10", @"15", nil] selectedIndex:0];
     
+    closeEnabledCell = [[SwitchCell alloc] initWithLabel:@"Close Enabled"];
+    [closeEnabledCell.switchControl addTarget:self action:@selector(toggleCloseEnabled:) forControlEvents:UIControlEventValueChanged];
+    
+    closeTimeoutCell = [[ChoiceCell alloc] initWithLabel:@"Close Timeout" choices:[NSArray arrayWithObjects:@"Immediately", @"30 Seconds", @"1 Minute", @"2 Minutes", @"5 Minutes", nil] selectedIndex:0];
+    
     rememberPasswordsEnabledCell = [[SwitchCell alloc] initWithLabel:@"Enabled"];
     [rememberPasswordsEnabledCell.switchControl addTarget:self action:@selector(toggleRememberPasswords:) forControlEvents:UIControlEventValueChanged];
     
@@ -101,6 +113,8 @@ enum {
     [pinLockTimeoutCell release];
     [deleteOnFailureEnabledCell release];
     [deleteOnFailureAttemptsCell release];
+    [closeEnabledCell release];
+    [closeTimeoutCell release];
     [rememberPasswordsEnabledCell release];
     [hidePasswordsCell release];
     [clearClipboardEnabledCell release];
@@ -117,12 +131,20 @@ enum {
     
     // Initialize all the controls with their settings
     NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+    
     pinEnabledCell.switchControl.on = [userDefaults boolForKey:@"pinEnabled"];
     [pinLockTimeoutCell setSelectedIndex:[userDefaults integerForKey:@"pinLockTimeout"]];
+    
     deleteOnFailureEnabledCell.switchControl.on = [userDefaults boolForKey:@"deleteOnFailureEnabled"];
     [deleteOnFailureAttemptsCell setSelectedIndex:[userDefaults integerForKey:@"deleteOnFailureAttempts"]];
+    
+    closeEnabledCell.switchControl.on = [userDefaults boolForKey:@"closeEnabled"];
+    [closeTimeoutCell setSelectedIndex:[userDefaults integerForKey:@"closeTimeout"]];
+    
     rememberPasswordsEnabledCell.switchControl.on = [userDefaults boolForKey:@"rememberPasswordsEnabled"];
+    
     hidePasswordsCell.switchControl.on = [userDefaults boolForKey:@"hidePasswords"];
+    
     clearClipboardEnabledCell.switchControl.on = [userDefaults boolForKey:@"clearClipboardEnabled"];
     [clearClipboardTimeoutCell setSelectedIndex:[userDefaults integerForKey:@"clearClipboardTimeout"]];
     
@@ -134,12 +156,14 @@ enum {
     NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
     BOOL pinEnabled = [userDefaults boolForKey:@"pinEnabled"];
     BOOL deleteOnFailureEnabled = [userDefaults boolForKey:@"deleteOnFailureEnabled"];
+    BOOL closeEnabled = [userDefaults boolForKey:@"closeEnabled"];
     BOOL clearClipboardEnabled = [userDefaults boolForKey:@"clearClipboardEnabled"];
     
     // Enable/disable the components dependant on settings
     [pinLockTimeoutCell setEnabled:pinEnabled];
     [deleteOnFailureEnabledCell setEnabled:pinEnabled];
     [deleteOnFailureAttemptsCell setEnabled:pinEnabled && deleteOnFailureEnabled];
+    [closeTimeoutCell setEnabled:closeEnabled];
     [linkDropboxCell setEnabled:YES]; //FIXME
     [clearClipboardTimeoutCell setEnabled:clearClipboardEnabled];
 }
@@ -160,6 +184,9 @@ enum {
             
         case SECTION_DELETE_ON_FAILURE:
             return ROW_DELETE_ON_FAILURE_NUMBER;
+            
+        case SECTION_CLOSE:
+            return ROW_CLOSE_NUMBER;
             
         case SECTION_REMEMBER_PASSWORDS:
             return ROW_REMEMBER_PASSWORDS_NUMBER;
@@ -184,6 +211,9 @@ enum {
         case SECTION_DELETE_ON_FAILURE:
             return @"Delete All Data on PIN Failure";
             
+        case SECTION_CLOSE:
+            return @"Close Database on Timeout";
+            
         case SECTION_REMEMBER_PASSWORDS:
             return @"Remember Database Passwords";
             
@@ -207,8 +237,11 @@ enum {
         case SECTION_DELETE_ON_FAILURE:
             return @"Delete all files and passwords after too many failed attempts.";
             
+        case SECTION_CLOSE:
+            return @"Automatically close an open database after the selected timeout.";
+            
         case SECTION_REMEMBER_PASSWORDS:
-            return @"Stores remembered database passwords in the phone's secure keychain.";
+            return @"Stores remembered database passwords in the devices's secure keychain.";
             
         case SECTION_HIDE_PASSWORDS:
             return @"Hides passwords when viewing a password entry.";
@@ -239,6 +272,15 @@ enum {
                     return deleteOnFailureEnabledCell;
                 case ROW_DELETE_ON_FAILURE_ATTEMPTS:
                     return deleteOnFailureAttemptsCell;
+            }
+            break;
+            
+        case SECTION_CLOSE:
+            switch (indexPath.row) {
+                case ROW_CLOSE_ENABLED:
+                    return closeEnabledCell;
+                case ROW_CLOSE_TIMEOUT:
+                    return closeTimeoutCell;
             }
             break;
             
@@ -295,8 +337,17 @@ enum {
         selectionListViewController.reference = indexPath;
         [self.navigationController pushViewController:selectionListViewController animated:YES];
         [selectionListViewController release];
+    } else if (indexPath.section == SECTION_CLOSE && indexPath.row == ROW_CLOSE_TIMEOUT && closeEnabledCell.switchControl.on) {
+        SelectionListViewController *selectionListViewController = [[SelectionListViewController alloc] initWithStyle:UITableViewStyleGrouped];
+        selectionListViewController.title = @"Close Timeout";
+        selectionListViewController.items = closeTimeoutCell.choices;
+        selectionListViewController.selectedIndex = [[NSUserDefaults standardUserDefaults] integerForKey:@"closeTimeout"];
+        selectionListViewController.delegate = self;
+        selectionListViewController.reference = indexPath;
+        [self.navigationController pushViewController:selectionListViewController animated:YES];
+        [selectionListViewController release];
     } else if (indexPath.section == SECTION_DROPBOX && indexPath.row == ROW_LINK_DROPBOX_BUTTON) {
-        DBLoginController* controller = [[DBLoginController new] autorelease];
+        DBLoginController *controller = [[DBLoginController new] autorelease];
         [controller presentFromController:self];
     } else if (indexPath.section == SECTION_CLEAR_CLIPBOARD && indexPath.row == ROW_CLEAR_CLIPBOARD_TIMEOUT && clearClipboardEnabledCell.switchControl.on) {
         SelectionListViewController *selectionListViewController = [[SelectionListViewController alloc] initWithStyle:UITableViewStyleGrouped];
@@ -326,6 +377,13 @@ enum {
         
         // Update the cell text
         [deleteOnFailureAttemptsCell setSelectedIndex:selectedIndex];
+    } else if (indexPath.section == SECTION_CLOSE && indexPath.row == ROW_CLOSE_TIMEOUT) {
+        // Save the user setting
+        NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+        [userDefaults setInteger:selectedIndex forKey:@"closeTimeout"];
+        
+        // Update the cell text
+        [pinLockTimeoutCell setSelectedIndex:selectedIndex];
     } else if (indexPath.section == SECTION_CLEAR_CLIPBOARD && indexPath.row == ROW_CLEAR_CLIPBOARD_TIMEOUT) {
         // Save the user setting
         NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
@@ -355,6 +413,14 @@ enum {
 - (void)toggleDeleteOnFailureEnabled:(id)sender {
     // Update the setting
     [[NSUserDefaults standardUserDefaults] setBool:deleteOnFailureEnabledCell.switchControl.on forKey:@"deleteOnFailureEnabled"];
+    
+    // Update which controls are enabled
+    [self updateEnabledControls];
+}
+
+- (void)toggleCloseEnabled:(id)sender {
+    // Update the setting
+    [[NSUserDefaults standardUserDefaults] setBool:closeEnabledCell.switchControl.on forKey:@"closeEnabled"];
     
     // Update which controls are enabled
     [self updateEnabledControls];
