@@ -23,6 +23,12 @@
 #import "Kdb3Writer.h"
 #import "Kdb4Writer.h"
 
+enum {
+    SECTION_DATABASE,
+    SECTION_KEYFILE,
+    SECTION_NUMBER
+};
+
 @implementation FilesViewController
 
 @synthesize selectedFile;
@@ -54,7 +60,8 @@
 
 - (void)dealloc {
     [filesHelpView release];
-    [files release];
+    [databaseFiles release];
+    [keyFiles release];
     [selectedFile release];
     [super dealloc];
 }
@@ -85,7 +92,22 @@
 }
 
 - (void)viewWillAppear:(BOOL)animated {
-    [files release];
+    [self updateFiles];
+    
+    NSIndexPath *selectedIndexPath = [self.tableView indexPathForSelectedRow];
+
+    [self.tableView reloadData];
+
+    if (selectedIndexPath != nil) {
+        [self.tableView selectRowAtIndexPath:selectedIndexPath animated:NO scrollPosition:UITableViewScrollPositionNone];
+    }
+    
+    [super viewWillAppear:animated];
+}
+
+- (void)updateFiles {
+    [databaseFiles release];
+    [keyFiles release];
     
     // Get the document's directory
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
@@ -93,29 +115,53 @@
     
     // Get the list of files in the documents directory
     NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:documentsDirectory error:nil];
-    NSArray *filenames = [dirContents filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"(self ENDSWITH '.kdb') OR (self ENDSWITH '.kdbx')"]];
-    files = [[NSMutableArray arrayWithArray:filenames] retain];
+    NSArray *databaseFilenames = [dirContents filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"(self ENDSWITH '.kdb') OR (self ENDSWITH '.kdbx')"]];
+    NSArray *keyFilenames = [dirContents filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"!((self ENDSWITH '.kdb') OR (self ENDSWITH '.kdbx'))"]];
     
-    NSIndexPath *selectedIndexPath = [self.tableView indexPathForSelectedRow];
-
-    [self.tableView reloadData];
-
-    if (selectedIndexPath != nil) {
-        [self.tableView selectRowAtIndexPath:selectedIndexPath animated:NO scrollPosition:UITableViewScrollPositionNone];        
-    }
-    
-    [super viewWillAppear:animated];
+    databaseFiles = [[NSMutableArray arrayWithArray:databaseFilenames] retain];
+    keyFiles = [[NSMutableArray arrayWithArray:keyFilenames] retain];    
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return 1;
+    return SECTION_NUMBER;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
+    switch (section) {
+        case SECTION_DATABASE:
+            if ([databaseFiles count] != 0) {
+                return @"Databases";
+            }
+            break;
+        case SECTION_KEYFILE:
+            if ([keyFiles count] != 0) {
+                return @"Key Files";
+            }
+            break;
+    }
+    
+    return nil;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    int n = [files count];
+    int databaseCount = [databaseFiles count];
+    int keyCount = [keyFiles count];
+    
+    int n;
+    switch (section) {
+        case SECTION_DATABASE:
+            n = databaseCount;
+            break;
+        case SECTION_KEYFILE:
+            n = keyCount;
+            break;
+        default:
+            n = 0;
+            break;
+    }
     
     // Show the help view if there are no files
-    if (n == 0) {
+    if (databaseCount == 0 && keyCount == 0) {
         [self displayHelpPage];
     } else {
         [self hideHelpPage];
@@ -133,32 +179,50 @@
     }
     
     // Configure the cell
-    cell.textLabel.text = [files objectAtIndex:indexPath.row];
+    switch (indexPath.section) {
+        case SECTION_DATABASE:
+            cell.textLabel.text = [databaseFiles objectAtIndex:indexPath.row];
+            cell.textLabel.textColor = [UIColor blackColor];
+            cell.selectionStyle = UITableViewCellSelectionStyleBlue;
+            break;
+        case SECTION_KEYFILE:
+            cell.textLabel.text = [keyFiles objectAtIndex:indexPath.row];
+            cell.textLabel.textColor = [UIColor grayColor];
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+            break;
+    }
     
     return cell;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (self.editing == NO) {
-        // Load the database
-        [[DatabaseManager sharedInstance] openDatabaseDocument:[files objectAtIndex:indexPath.row] animated:YES];
-    } else {
-        TextEntryController *textEntryController = [[TextEntryController alloc] initWithStyle:UITableViewStyleGrouped];
-        textEntryController.title = @"Rename";
-        textEntryController.headerTitle = @"Database Name";
-        textEntryController.footerTitle = @"Enter a new name for the password database.  The correct file extension will automatically be appended.";
-        textEntryController.textEntryDelegate = self;
-        textEntryController.textField.placeholder = @"Name";
-        
-        NSString *filename = [files objectAtIndex:indexPath.row];
-        textEntryController.textField.text = [filename stringByDeletingPathExtension];
-        
-        UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:textEntryController];
-        
-        [appDelegate.window.rootViewController presentModalViewController:navigationController animated:YES];
-        
-        [navigationController release];
-        [textEntryController release];
+    switch (indexPath.section) {
+        // Database file section
+        case SECTION_DATABASE:
+            if (self.editing == NO) {
+                // Load the database
+                [[DatabaseManager sharedInstance] openDatabaseDocument:[databaseFiles objectAtIndex:indexPath.row] animated:YES];
+            } else {
+                TextEntryController *textEntryController = [[TextEntryController alloc] initWithStyle:UITableViewStyleGrouped];
+                textEntryController.title = @"Rename";
+                textEntryController.headerTitle = @"Database Name";
+                textEntryController.footerTitle = @"Enter a new name for the password database.  The correct file extension will automatically be appended.";
+                textEntryController.textEntryDelegate = self;
+                textEntryController.textField.placeholder = @"Name";
+                
+                NSString *filename = [databaseFiles objectAtIndex:indexPath.row];
+                textEntryController.textField.text = [filename stringByDeletingPathExtension];
+                
+                UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:textEntryController];
+                
+                [appDelegate.window.rootViewController presentModalViewController:navigationController animated:YES];
+                
+                [navigationController release];
+                [textEntryController release];
+            }
+            break;
+        default:
+            break;
     }
 }
 
@@ -166,8 +230,24 @@
     if (editingStyle != UITableViewCellEditingStyleDelete) {
         return;
     }
-    
-    NSString *filename = [files objectAtIndex:indexPath.row];
+
+    NSString *filename;
+    switch (indexPath.section) {
+        case SECTION_DATABASE:
+            filename = [[databaseFiles objectAtIndex:indexPath.row] copy];
+            [databaseFiles removeObject:filename];
+
+            // Delete the keychain entries for the old filename
+            [SFHFKeychainUtils deleteItemForUsername:filename andServiceName:@"com.jflan.MiniKeePass.passwords" error:nil];
+            [SFHFKeychainUtils deleteItemForUsername:filename andServiceName:@"com.jflan.MiniKeePass.keychains" error:nil];
+            break;
+        case SECTION_KEYFILE:
+            filename = [[keyFiles objectAtIndex:indexPath.row] copy];
+            [keyFiles removeObject:filename];
+            break;
+        default:
+            return;
+    }
     
     // Retrieve the Document directory
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
@@ -183,11 +263,11 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
     [fileManager removeItemAtPath:path error:nil];
     
-    // Remove the file from the array
-    [files removeObject:filename];
-    
     // Update the table
     [tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
+    [tableView reloadSections:[NSIndexSet indexSetWithIndex:indexPath.section] withRowAnimation:UITableViewRowAnimationNone];
+    
+    [filename release];
 }
 
 - (void)textEntryController:(TextEntryController *)controller textEntered:(NSString *)string {
@@ -197,7 +277,7 @@
     }
     
     NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
-    NSString *oldFilename = [files objectAtIndex:indexPath.row];
+    NSString *oldFilename = [[databaseFiles objectAtIndex:indexPath.row] retain];
     NSString *newFilename = [string stringByAppendingPathExtension:[oldFilename pathExtension]];
     
     // Get the full path of where we're going to move the file
@@ -211,6 +291,7 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
     if ([fileManager fileExistsAtPath:newPath]) {
         [controller showErrorMessage:@"A file already exists with this name"];
+        [oldFilename release];
         return;
     }
     
@@ -218,7 +299,21 @@
     [fileManager moveItemAtPath:oldPath toPath:newPath error:nil];
     
     // Update the filename in the files list
-    [files replaceObjectAtIndex:indexPath.row withObject:newFilename];
+    [databaseFiles replaceObjectAtIndex:indexPath.row withObject:newFilename];
+    
+    // Load the password and keyfile from the keychain under the old filename
+    NSString *password = [SFHFKeychainUtils getPasswordForUsername:oldFilename andServiceName:@"com.jflan.MiniKeePass.passwords" error:nil];
+    NSString *keyFile = [SFHFKeychainUtils getPasswordForUsername:oldFilename andServiceName:@"com.jflan.MiniKeePass.keyfiles" error:nil];
+    
+    // Store the password and keyfile into the keychain under the new filename
+    [SFHFKeychainUtils storeUsername:newFilename andPassword:password forServiceName:@"com.jflan.MiniKeePass.passwords" updateExisting:YES error:nil];
+    [SFHFKeychainUtils storeUsername:newFilename andPassword:keyFile forServiceName:@"com.jflan.MiniKeePass.keyfiles" updateExisting:YES error:nil];
+    
+    // Delete the keychain entries for the old filename
+    [SFHFKeychainUtils deleteItemForUsername:oldFilename andServiceName:@"com.jflan.MiniKeePass.passwords" error:nil];
+    [SFHFKeychainUtils deleteItemForUsername:oldFilename andServiceName:@"com.jflan.MiniKeePass.keychains" error:nil];
+    
+    [oldFilename release];
     
     // Reload the table row
     [self.tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
@@ -291,10 +386,15 @@
         } else {
             writer = [[Kdb4Writer alloc] init];
         }
-
+        
+        // Create the KdbPassword
+        KdbPassword *kdbPassword = [[KdbPassword alloc] initWithPassword:password1 encoding:NSUTF8StringEncoding];
+        
         // Create the new database
-        [writer newFile:path withPassword:password1];
+        [writer newFile:path withPassword:kdbPassword];
         [writer release];
+        
+        [kdbPassword release];
         
         // Store the password in the keychain
         NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
@@ -304,10 +404,19 @@
         }
         
         // Add the file to the list of files
-        [files addObject:filename];
+        [databaseFiles addObject:filename];
         
-        NSUInteger index = [files count] - 1;
-        [self.tableView insertRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:index inSection:0]] withRowAnimation:UITableViewRowAnimationRight];
+        // Notify the table of the new row
+        NSUInteger index = [databaseFiles count] - 1;
+        NSIndexPath *indexPath = [NSIndexPath indexPathForRow:index inSection:SECTION_DATABASE];
+        if (index == 0) {
+            // Reload the section if it's the first item
+            NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:SECTION_DATABASE];
+            [self.tableView reloadSections:indexSet withRowAnimation:UITableViewRowAnimationRight];
+        } else {
+            // Insert the new row
+            [self.tableView insertRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationRight];
+        }
     }
     
     [appDelegate.window.rootViewController dismissModalViewControllerAnimated:YES];

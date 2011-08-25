@@ -30,6 +30,8 @@
     SwitchCell *rememberPasswordsEnabledCell;
     SwitchCell *hidePasswordsCell;
     ButtonCell *linkDropboxCell;
+    SwitchCell *clearClipboardEnabledCell;
+    ChoiceCell *clearClipboardTimeoutCell;
     
     NSString *tempPin;
 }

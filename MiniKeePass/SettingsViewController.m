@@ -28,6 +28,7 @@ enum {
     SECTION_REMEMBER_PASSWORDS,
     SECTION_HIDE_PASSWORDS,
     SECTION_DROPBOX,
+    SECTION_CLEAR_CLIPBOARD,
     SECTION_NUMBER
 };
 
@@ -58,6 +59,12 @@ enum {
     ROW_LINK_DROPBOX_NUMBER
 };
 
+enum {
+    ROW_CLEAR_CLIPBOARD_ENABLED,
+    ROW_CLEAR_CLIPBOARD_TIMEOUT,
+    ROW_CLEAR_CLIPBOARD_NUMBER
+};
+
 @implementation SettingsViewController
 
 - (void)viewDidLoad {
@@ -82,6 +89,11 @@ enum {
     [hidePasswordsCell.switchControl addTarget:self action:@selector(toggleHidePasswords:) forControlEvents:UIControlEventValueChanged];
     
     linkDropboxCell = [[ButtonCell alloc] initWithLabel:@"Link"];
+    
+    clearClipboardEnabledCell = [[SwitchCell alloc] initWithLabel:@"Enabled"];
+    [clearClipboardEnabledCell.switchControl addTarget:self action:@selector(toggleClearClipboardEnabled:) forControlEvents:UIControlEventValueChanged];
+    
+    clearClipboardTimeoutCell = [[ChoiceCell alloc] initWithLabel:@"Clear Timeout" choices:[NSArray arrayWithObjects:@"30 Seconds", @"1 Minute", @"2 Minutes", @"3 Minutes", nil] selectedIndex:0];
 }
 
 - (void)dealloc {
@@ -91,6 +103,8 @@ enum {
     [deleteOnFailureAttemptsCell release];
     [rememberPasswordsEnabledCell release];
     [hidePasswordsCell release];
+    [clearClipboardEnabledCell release];
+    [clearClipboardTimeoutCell release];
     [super dealloc];
 }
 
@@ -109,6 +123,8 @@ enum {
     [deleteOnFailureAttemptsCell setSelectedIndex:[userDefaults integerForKey:@"deleteOnFailureAttempts"]];
     rememberPasswordsEnabledCell.switchControl.on = [userDefaults boolForKey:@"rememberPasswordsEnabled"];
     hidePasswordsCell.switchControl.on = [userDefaults boolForKey:@"hidePasswords"];
+    clearClipboardEnabledCell.switchControl.on = [userDefaults boolForKey:@"clearClipboardEnabled"];
+    [clearClipboardTimeoutCell setSelectedIndex:[userDefaults integerForKey:@"clearClipboardTimeout"]];
     
     // Update which controls are enabled
     [self updateEnabledControls];
@@ -118,15 +134,22 @@ enum {
     NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
     BOOL pinEnabled = [userDefaults boolForKey:@"pinEnabled"];
     BOOL deleteOnFailureEnabled = [userDefaults boolForKey:@"deleteOnFailureEnabled"];
+    BOOL clearClipboardEnabled = [userDefaults boolForKey:@"clearClipboardEnabled"];
     
     // Enable/disable the components dependant on settings
     [pinLockTimeoutCell setEnabled:pinEnabled];
     [deleteOnFailureEnabledCell setEnabled:pinEnabled];
     [deleteOnFailureAttemptsCell setEnabled:pinEnabled && deleteOnFailureEnabled];
     [linkDropboxCell setEnabled:YES]; //FIXME
+    [clearClipboardTimeoutCell setEnabled:clearClipboardEnabled];
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    MiniKeePassAppDelegate *appDelegate = (MiniKeePassAppDelegate*)[[UIApplication sharedApplication] delegate];
+    if (!appDelegate.backgroundSupported) {
+        return SECTION_NUMBER - 1;
+    }
+    
     return SECTION_NUMBER;
 }
 
@@ -146,6 +169,9 @@ enum {
         
         case SECTION_DROPBOX:
             return ROW_LINK_DROPBOX_NUMBER;
+            
+        case SECTION_CLEAR_CLIPBOARD:
+            return ROW_CLEAR_CLIPBOARD_NUMBER;
     }
     return 0;
 }
@@ -166,6 +192,9 @@ enum {
             
         case SECTION_DROPBOX:
             return @"Dropbox";
+            
+        case SECTION_CLEAR_CLIPBOARD:
+            return @"Clear Clipboard on Timeout";
     }
     return nil;
 }
@@ -183,9 +212,12 @@ enum {
             
         case SECTION_HIDE_PASSWORDS:
             return @"Hides passwords when viewing a password entry.";
-            
+
         case SECTION_DROPBOX:
             return @"Link with your Dropbox account to keep changes in sync between multiple devices.";
+
+        case SECTION_CLEAR_CLIPBOARD:
+            return @"Clear the contents of the clipboard after a given timeout upon performing a copy.";
     }
     return nil;
 }
@@ -207,7 +239,6 @@ enum {
                     return deleteOnFailureEnabledCell;
                 case ROW_DELETE_ON_FAILURE_ATTEMPTS:
                     return deleteOnFailureAttemptsCell;
-                    break;
             }
             break;
             
@@ -229,6 +260,15 @@ enum {
             switch (indexPath.row) {
                 case ROW_LINK_DROPBOX_BUTTON:
                     return linkDropboxCell;
+            }
+            break;
+
+        case SECTION_CLEAR_CLIPBOARD:
+            switch (indexPath.row) {
+                case ROW_CLEAR_CLIPBOARD_ENABLED:
+                    return clearClipboardEnabledCell;
+                case ROW_CLEAR_CLIPBOARD_TIMEOUT:
+                    return clearClipboardTimeoutCell;
             }
             break;
     }
@@ -258,6 +298,15 @@ enum {
     } else if (indexPath.section == SECTION_DROPBOX && indexPath.row == ROW_LINK_DROPBOX_BUTTON) {
         DBLoginController* controller = [[DBLoginController new] autorelease];
         [controller presentFromController:self];
+    } else if (indexPath.section == SECTION_CLEAR_CLIPBOARD && indexPath.row == ROW_CLEAR_CLIPBOARD_TIMEOUT && clearClipboardEnabledCell.switchControl.on) {
+        SelectionListViewController *selectionListViewController = [[SelectionListViewController alloc] initWithStyle:UITableViewStyleGrouped];
+        selectionListViewController.title = @"Clear Clipboard Timeout";
+        selectionListViewController.items = clearClipboardTimeoutCell.choices;
+        selectionListViewController.selectedIndex = [[NSUserDefaults standardUserDefaults] integerForKey:@"clearClipboardTimeout"];
+        selectionListViewController.delegate = self;
+        selectionListViewController.reference = indexPath;
+        [self.navigationController pushViewController:selectionListViewController animated:YES];
+        [selectionListViewController release];
     }
 }
 
@@ -277,6 +326,13 @@ enum {
         
         // Update the cell text
         [deleteOnFailureAttemptsCell setSelectedIndex:selectedIndex];
+    } else if (indexPath.section == SECTION_CLEAR_CLIPBOARD && indexPath.row == ROW_CLEAR_CLIPBOARD_TIMEOUT) {
+        // Save the user setting
+        NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+        [userDefaults setInteger:selectedIndex forKey:@"clearClipboardTimeout"];
+        
+        // Update the cell text
+        [clearClipboardTimeoutCell setSelectedIndex:selectedIndex];
     }
 }
 
@@ -310,11 +366,20 @@ enum {
     
     // Delete all database passwords from the keychain
     [SFHFKeychainUtils deleteAllItemForServiceName:@"com.jflan.MiniKeePass.passwords" error:nil];
+    [SFHFKeychainUtils deleteAllItemForServiceName:@"com.jflan.MiniKeePass.keyfiles" error:nil];
 }
 
 - (void)toggleHidePasswords:(id)sender {
     // Update the setting
     [[NSUserDefaults standardUserDefaults] setBool:hidePasswordsCell.switchControl.on forKey:@"hidePasswords"];
+}
+
+- (void)toggleClearClipboardEnabled:(id)sender {
+    // Update the setting
+    [[NSUserDefaults standardUserDefaults] setBool:clearClipboardEnabledCell.switchControl.on forKey:@"clearClipboardEnabled"];
+    
+    // Update which controls are enabled
+    [self updateEnabledControls];
 }
 
 - (void)pinViewController:(PinViewController *)controller pinEntered:(NSString *)pin {        

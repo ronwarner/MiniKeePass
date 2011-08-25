@@ -15,21 +15,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#import <UIKit/UIKit.h>
-#import "SelectionListViewController.h"
+#import "RandomStream.h"
 
-@interface ChoiceCell : UITableViewCell {
-    NSString *prefix;
-    NSInteger selectedIndex;
-    NSArray *choices;
+@implementation RandomStream
+
+- (uint8_t)getByte {
+    [self doesNotRecognizeSelector:_cmd];
+    return 0;
 }
 
-@property (nonatomic, copy) NSString *prefix;
-@property (nonatomic, assign) NSInteger selectedIndex;
-@property (nonatomic, retain) NSArray *choices;
+- (uint16_t)getShort {
+    uint16_t value = 0;
+    
+    value |= [self getByte] << 8;
+    value |= [self getByte];
+    
+    return value;
+}
 
-- (id)initWithLabel:(NSString*)labelText choices:(NSArray*)newChoices selectedIndex:(NSInteger)selectedIndex;
-- (void)setEnabled:(BOOL)enabled;
-- (NSString*)getSelectedItem;
+- (uint32_t)getInt {
+    uint32_t value = 0;
+    
+    value |= [self getByte] << 24;
+    value |= [self getByte] << 16;
+    value |= [self getByte] << 8;
+    value |= [self getByte];
+    
+    return value;
+}
+
+- (void)xor:(NSMutableData*)data {
+    uint8_t *bytes = (uint8_t*)data.mutableBytes;
+    NSUInteger length = data.length;
+    
+    for (int i = 0; i < length; i++) {
+        bytes[i] ^= [self getByte];
+    }
+}
 
 @end

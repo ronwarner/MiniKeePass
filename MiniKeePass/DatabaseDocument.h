@@ -21,8 +21,10 @@
 @interface DatabaseDocument : NSObject {
     KdbTree *kdbTree;
     NSString *filename;
-    NSString *password;
     BOOL dirty;
+    
+    KdbPassword *kdbPassword;
+    
     UIDocumentInteractionController *documentInteractionController;
 }
 
@@ -31,7 +33,7 @@
 @property (nonatomic) BOOL dirty;
 @property (nonatomic, readonly) UIDocumentInteractionController *documentInteractionController;
 
-- (void)open:(NSString*)newFilename password:(NSString*)newPassword;
+- (void)open:(NSString*)newFilename password:(NSString*)password keyFile:(NSString*)keyFile;
 - (void)save;
 - (void)searchGroup:(KdbGroup*)group searchText:(NSString*)searchText results:(NSMutableArray*)results;
 

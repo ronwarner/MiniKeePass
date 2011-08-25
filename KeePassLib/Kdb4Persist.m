@@ -26,7 +26,7 @@
 
 @implementation Kdb4Persist
 
-- (id)initWithTree:(Kdb4Tree*)t outputStream:(OutputStream*)stream randomStream:(id<RandomStream>)cryptoRandomStream {
+- (id)initWithTree:(Kdb4Tree*)t outputStream:(OutputStream*)stream randomStream:(RandomStream*)cryptoRandomStream {
     self = [super init];
     if (self) {
         tree = [t retain];
@@ -134,13 +134,15 @@
     DDXMLNode *protectedAttribute = [root attributeForName:@"Protected"];
     if ([[protectedAttribute stringValue] isEqual:@"True"]) {
         NSString *str = [root stringValue];
-        NSMutableData *data = [[str dataUsingEncoding:NSUTF8StringEncoding] mutableCopy];
+        NSMutableData *mutableData = [[str dataUsingEncoding:NSUTF8StringEncoding] mutableCopy];
         
         // Unprotect the password
-        [randomStream xor:data];
+        [randomStream xor:mutableData];
         
         // Base64 encode the string
-        data = [Base64 encode:data];
+        NSData *data = [Base64 encode:mutableData];
+        
+        [mutableData release];
         
         NSString *protected = [[NSString alloc] initWithBytes:data.bytes length:data.length encoding:NSUTF8StringEncoding];
         [root setStringValue:protected];

@@ -21,7 +21,7 @@
 
 @implementation KdbWriterFactory
 
-+ (void)persist:(KdbTree*)tree file:(NSString*)filename withPassword:(NSString*)password {
++ (void)persist:(KdbTree*)tree file:(NSString*)filename withPassword:(KdbPassword*)kdbPassword {
     id<KdbWriter> writer;
     
     if ([tree isKindOfClass:[Kdb3Tree class]]) {
@@ -29,10 +29,10 @@
     } else if ([tree isKindOfClass:[Kdb4Tree class]]) {
         writer = [[Kdb4Writer alloc] init];
     } else {
-        @throw [NSException exceptionWithName:@"IllegalArgument" reason:@"IllegalArgument" userInfo:nil];
+        @throw [NSException exceptionWithName:@"IllegalArgument" reason:@"KdbTree is not of a known type" userInfo:nil];
     }
     
-    [writer persist:tree file:filename withPassword:password];
+    [writer persist:tree file:filename withPassword:kdbPassword];
     [writer release];
 }
 

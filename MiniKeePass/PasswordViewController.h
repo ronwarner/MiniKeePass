@@ -16,20 +16,17 @@
  */
 
 #import <UIKit/UIKit.h>
-#import "SelectionListViewController.h"
+#import "FormViewController.h"
+#import "ChoiceCell.h"
 
-@interface ChoiceCell : UITableViewCell {
-    NSString *prefix;
-    NSInteger selectedIndex;
-    NSArray *choices;
+@interface PasswordViewController : FormViewController <SelectionListViewControllerDelegate, UITextFieldDelegate> {
+    UITextField *passwordTextField;
+    ChoiceCell *keyFileCell;
 }
 
-@property (nonatomic, copy) NSString *prefix;
-@property (nonatomic, assign) NSInteger selectedIndex;
-@property (nonatomic, retain) NSArray *choices;
+@property (nonatomic, readonly) UITextField *passwordTextField;
+@property (nonatomic, readonly) ChoiceCell *keyFileCell;
 
-- (id)initWithLabel:(NSString*)labelText choices:(NSArray*)newChoices selectedIndex:(NSInteger)selectedIndex;
-- (void)setEnabled:(BOOL)enabled;
-- (NSString*)getSelectedItem;
+- (id)initWithFilename:(NSString*)filename;
 
 @end

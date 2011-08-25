@@ -37,7 +37,7 @@
     [super dealloc];
 }
 
-- (KdbTree*)load:(InputStream*)inputStream withPassword:(NSString*)password {
+- (KdbTree*)load:(InputStream*)inputStream withPassword:(KdbPassword*)kdbPassword {
     // Read the header
     [self readHeader:inputStream];
     
@@ -47,7 +47,7 @@
     }
     
     // Create the AES input stream
-    NSData *key = [KdbPassword createFinalKey32ForPasssword:password encoding:NSUTF8StringEncoding kdbVersion:4 masterSeed:masterSeed transformSeed:transformSeed rounds:rounds];
+    NSData *key = [kdbPassword createFinalKeyForVersion:4 masterSeed:masterSeed transformSeed:transformSeed rounds:rounds];
     AesInputStream *aesInputStream = [[[AesInputStream alloc] initWithInputStream:inputStream key:key iv:encryptionIv] autorelease];
     
     // Verify the stream start bytes match
@@ -63,7 +63,7 @@
     }
     
     // Create the CRS Algorithm
-    id<RandomStream> randomStream = nil;
+    RandomStream *randomStream = nil;
     if (randomStreamID == CSR_SALSA20) {
         randomStream = [[[Salsa20RandomStream alloc] init:protectedStreamKey] autorelease];
     } else if (randomStreamID == CSR_ARC4VARIANT) {

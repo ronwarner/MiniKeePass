@@ -26,9 +26,12 @@
     FilesHelpView *filesHelpView;
     MiniKeePassAppDelegate *appDelegate;
     
-    NSMutableArray *files;
+    NSMutableArray *databaseFiles;
+    NSMutableArray *keyFiles;
     NSString *selectedFile;
 }
+
+- (void)updateFiles;
 
 @property (nonatomic, copy) NSString* selectedFile;
 

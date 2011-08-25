@@ -31,9 +31,11 @@
 
 @synthesize window;
 @synthesize databaseDocument;
+@synthesize backgroundSupported;
 
 static NSInteger pinLockTimeoutValues[] = {0, 30, 60, 120, 300};
 static NSInteger deleteOnFailureAttemptsValues[] = {3, 5, 10};
+static NSInteger clearClipboardTimeoutValues[] = {30, 60, 120, 180};
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     //Dropbox code
@@ -56,6 +58,7 @@ static NSInteger deleteOnFailureAttemptsValues[] = {3, 5, 10};
     [defaultsDict setValue:[NSNumber numberWithInt:1] forKey:@"deleteOnFailureAttempts"];
     [defaultsDict setValue:[NSNumber numberWithBool:YES] forKey:@"rememberPasswordsEnabled"];
     [defaultsDict setValue:[NSNumber numberWithBool:YES] forKey:@"hidePasswords"];
+    [defaultsDict setValue:[NSNumber numberWithBool:NO] forKey:@"clearClipboardEnabled"];
     
     NSUserDefaults* userDefaults = [NSUserDefaults standardUserDefaults];
     [userDefaults registerDefaults:defaultsDict];
@@ -71,6 +74,19 @@ static NSInteger deleteOnFailureAttemptsValues[] = {3, 5, 10};
     window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     window.rootViewController = navigationController;
     [window makeKeyAndVisible];
+    
+    // Check if backgrounding is supported
+    backgroundSupported = FALSE;
+    UIDevice* device = [UIDevice currentDevice];
+    if ([device respondsToSelector:@selector(isMultitaskingSupported)]) {
+        backgroundSupported = device.multitaskingSupported;
+    }
+    
+    // Add a pasteboard notification listener is backgrounding is supported
+    if (backgroundSupported) {
+    NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
+        [notificationCenter addObserver:self selector:@selector(handlePasteboardNotification:) name:UIPasteboardChangedNotification object:nil];
+    }
     
     return YES;
 }
@@ -155,9 +171,16 @@ static NSInteger deleteOnFailureAttemptsValues[] = {3, 5, 10};
     [fileManager moveItemAtURL:url toURL:newUrl error:nil];
     [fileManager removeItemAtPath:[documentsDirectory stringByAppendingPathComponent:@"Inbox"] error:nil];
     
-    // Store the filename to open
+    // Store the filename to open if it's a database
     [fileToOpen release];
-    fileToOpen = [filename copy];
+    if ([filename hasSuffix:@".kdb"] || [filename hasSuffix:@".kdbx"]) {
+        fileToOpen = [filename copy];
+    } else {
+        fileToOpen = nil;
+        FilesViewController *fileView = [[navigationController viewControllers] objectAtIndex:0];
+        [fileView updateFiles];
+        [fileView.tableView reloadData];
+    }
     
     return YES;
 }
@@ -203,6 +226,7 @@ static NSInteger deleteOnFailureAttemptsValues[] = {3, 5, 10};
     
     // Delete all database passwords from the keychain
     [SFHFKeychainUtils deleteAllItemForServiceName:@"com.jflan.MiniKeePass.passwords" error:nil];
+    [SFHFKeychainUtils deleteAllItemForServiceName:@"com.jflan.MiniKeePass.keyfiles" error:nil];
     
     // Get the files in the Documents directory
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -226,6 +250,45 @@ static NSInteger deleteOnFailureAttemptsValues[] = {3, 5, 10};
     }
     
     return images[index];
+}
+
+- (void)handlePasteboardNotification:(NSNotification*)notification {
+    // Check if the clipboard has any contents
+    UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+    if (pasteboard.string == nil || [pasteboard.string isEqualToString:@""]) {
+        return;
+    }
+    
+    // Check if the clearing the clipboard is enabled
+    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+    if ([userDefaults boolForKey:@"clearClipboardEnabled"]) {
+        // Get the "version" of the pasteboard contents
+        NSInteger pasteboardVersion = pasteboard.changeCount;
+
+        // Get the clear clipboard timeout (in seconds)
+        NSInteger clearClipboardTimeout = clearClipboardTimeoutValues[[userDefaults integerForKey:@"clearClipboardTimeout"]];
+        
+        // Initiate a background task
+        UIApplication *application = [UIApplication sharedApplication];
+        UIBackgroundTaskIdentifier bgTask = [application beginBackgroundTaskWithExpirationHandler:^{
+            // End the background task
+            [application endBackgroundTask:bgTask];
+        }];
+        
+        // Start the long-running task and return immediately.
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            // Sleep until it's time to clean the clipboard
+            [NSThread sleepForTimeInterval:clearClipboardTimeout];
+            
+            // Clear the clipboard if it hasn't changed
+            if (pasteboardVersion == pasteboard.changeCount) {
+                pasteboard.string = @"";
+            }
+            
+            // End the background task
+            [application endBackgroundTask:bgTask];
+        });
+    }
 }
 
 - (void)pinViewController:(PinViewController *)controller pinEntered:(NSString *)pin {

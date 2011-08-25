@@ -23,11 +23,11 @@
 @interface Kdb4Persist : NSObject {
     Kdb4Tree *tree;
     OutputStream *outputStream;
-    id<RandomStream> randomStream;
+    RandomStream *randomStream;
     NSDateFormatter *dateFormatter;
 }
 
-- (id)initWithTree:(Kdb4Tree*)tree outputStream:(OutputStream*)stream randomStream:(id<RandomStream>)cryptoRandomStream;
+- (id)initWithTree:(Kdb4Tree*)tree outputStream:(OutputStream*)stream randomStream:(RandomStream*)cryptoRandomStream;
 - (void)persist;
 
 @end
